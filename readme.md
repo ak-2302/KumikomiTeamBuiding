@@ -9,6 +9,7 @@
 
 ## 構成
 - `MainActivity.java`：メイン処理
+- `HttpAnalyzer.java`：Raspberry Pi からの HTTP リクエストを受信
 - `myModule.java`：ライブラリ
   - function `beep`：端末から音を鳴らす関数
   - function `vibrate`：端末を振動をする関数
@@ -33,3 +34,43 @@ myModule.notification(this, "集中時間", "姿勢を確認してください")
 
 Android 13（API 33）以降では、通知を表示する前に
 `POST_NOTIFICATIONS` 権限を Activity から実行時に要求してください。
+
+## Raspberry Pi からの HTTP アクセス
+
+アプリの起動中、Android 端末は TCP ポート `8080` で HTTP リクエストを待ち受けます。
+Raspberry Pi と Android 端末を同じネットワークに接続し、Android 端末の IP アドレスへ
+JSON 形式の POST リクエストを送信してください。
+
+### データを送信
+
+```bash
+curl -X POST http://ANDROID_IP:8080/api/data \
+  -H 'Content-Type: application/json' \
+  -d '{"data":{"focus":80,"status":"working"}}'
+```
+
+### 音を鳴らす
+
+```bash
+curl -X POST http://ANDROID_IP:8080/api/beep \
+  -H 'Content-Type: application/json' \
+  -d '{"durationMs":300}'
+```
+
+### 端末を振動させる
+
+```bash
+curl -X POST http://ANDROID_IP:8080/api/vibrate \
+  -H 'Content-Type: application/json' \
+  -d '{"durationMs":500}'
+```
+
+### 通知を送信
+
+```bash
+curl -X POST http://ANDROID_IP:8080/api/notification \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"集中時間","message":"姿勢を確認してください"}'
+```
+
+`durationMs` は省略可能です。HTTP レスポンスは処理の受付結果を JSON で返します。
