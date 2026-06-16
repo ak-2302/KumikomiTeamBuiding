@@ -166,10 +166,7 @@ public final class HttpAnalyzer {
 
         switch (request.path) {
             case "/api/data":
-                if (!body.has("data")) {
-                    throw new BadRequestException(400, "data is required");
-                }
-                Object data = body.get("data");
+                JSONObject data = parseDataPayload(body);
                 mainHandler.post(() -> {
                     if (listener != null) {
                         listener.onDataReceived(data);
@@ -207,6 +204,19 @@ public final class HttpAnalyzer {
             default:
                 return HttpResponse.error(404, "endpoint not found");
         }
+    }
+
+    private static JSONObject parseDataPayload(JSONObject body)
+            throws JSONException, BadRequestException {
+        String type = requiredString(body, "type");
+        if (!body.has("value")) {
+            throw new BadRequestException(400, "value is required");
+        }
+
+        JSONObject data = new JSONObject();
+        data.put("type", type);
+        data.put("value", body.get("value"));
+        return data;
     }
 
     private static JSONObject parseJsonBody(String body) throws BadRequestException {

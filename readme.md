@@ -43,10 +43,19 @@ JSON 形式の POST リクエストを送信してください。
 
 ### データを送信
 
+`type` にデータの種類、`value` に値を指定します。
+`value` は数値、文字列、真偽値、JSON オブジェクトなどを送信できます。
+
 ```bash
 curl -X POST http://ANDROID_IP:8080/api/data \
   -H 'Content-Type: application/json' \
-  -d '{"data":{"focus":80,"status":"working"}}'
+  -d '{"type":"time","value":10}'
+```
+
+```bash
+curl -X POST http://ANDROID_IP:8080/api/data \
+  -H 'Content-Type: application/json' \
+  -d '{"type":"focus","value":{"score":80,"status":"working"}}'
 ```
 
 ### 音を鳴らす
