@@ -8,14 +8,18 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
 import android.os.Build;
+import android.os.CombinedVibration;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.VibrationAttributes;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.VibratorManager;
+import android.util.Log;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -23,8 +27,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Provides the sound, vibration, and notification operations used by the app.
  */
 public final class myModule {
+    private static final String TAG = "myModule";
     private static final int DEFAULT_BEEP_DURATION_MS = 200;
     private static final long DEFAULT_VIBRATION_DURATION_MS = 500L;
+    private static final int STRONG_VIBRATION_AMPLITUDE = 255;
     private static final String NOTIFICATION_CHANNEL_ID = "focus_alerts";
     private static final AtomicInteger NEXT_NOTIFICATION_ID = new AtomicInteger(1);
 
@@ -64,27 +70,72 @@ public final class myModule {
             throw new IllegalArgumentException("durationMs must be greater than 0");
         }
 
-        Vibrator vibrator;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            VibratorManager vibratorManager =
-                    (VibratorManager) context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
-            vibrator = vibratorManager == null ? null : vibratorManager.getDefaultVibrator();
-        } else {
-            vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+            return vibrateWithManager(context, durationMs);
         }
 
+        Vibrator vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
         if (vibrator == null || !vibrator.hasVibrator()) {
+            Log.w(TAG, "Vibrator is not available");
             return false;
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator.vibrate(
-                    VibrationEffect.createOneShot(durationMs, VibrationEffect.DEFAULT_AMPLITUDE)
-            );
-        } else {
-            vibrator.vibrate(durationMs);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(createStrongVibration(durationMs), createAlarmAudioAttributes());
+            } else {
+                vibrator.vibrate(durationMs, createAlarmAudioAttributes());
+            }
+            return true;
+        } catch (SecurityException e) {
+            Log.w(TAG, "VIBRATE permission is not available", e);
+            return false;
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Failed to start vibration", e);
+            return false;
         }
-        return true;
+    }
+
+    private static boolean vibrateWithManager(Context context, long durationMs) {
+        VibratorManager vibratorManager =
+                (VibratorManager) context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
+        if (vibratorManager == null) {
+            Log.w(TAG, "VibratorManager is not available");
+            return false;
+        }
+
+        Vibrator vibrator = vibratorManager.getDefaultVibrator();
+        if (vibrator == null || !vibrator.hasVibrator()) {
+            Log.w(TAG, "Default vibrator is not available");
+            return false;
+        }
+
+        try {
+            vibratorManager.vibrate(
+                    CombinedVibration.createParallel(createStrongVibration(durationMs)),
+                    new VibrationAttributes.Builder()
+                            .setUsage(VibrationAttributes.USAGE_ALARM)
+                            .build()
+            );
+            return true;
+        } catch (SecurityException e) {
+            Log.w(TAG, "VIBRATE permission is not available", e);
+            return false;
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Failed to start vibration", e);
+            return false;
+        }
+    }
+
+    private static VibrationEffect createStrongVibration(long durationMs) {
+        return VibrationEffect.createOneShot(durationMs, STRONG_VIBRATION_AMPLITUDE);
+    }
+
+    private static AudioAttributes createAlarmAudioAttributes() {
+        return new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build();
     }
 
     public static boolean notification(Context context, String message) {
