@@ -59,6 +59,14 @@ curl -X POST http://ANDROID_IP:8080/api/beep \
 
 ### 端末を振動させる
 
+標準の振動時間で実行する場合は、空の POST リクエストでも動作します。
+
+```bash
+curl -X POST http://ANDROID_IP:8080/api/vibrate
+```
+
+振動時間を指定する場合は `durationMs` を送信してください。
+
 ```bash
 curl -X POST http://ANDROID_IP:8080/api/vibrate \
   -H 'Content-Type: application/json' \

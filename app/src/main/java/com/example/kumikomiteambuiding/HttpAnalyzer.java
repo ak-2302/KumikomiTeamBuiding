@@ -162,12 +162,7 @@ public final class HttpAnalyzer {
             return HttpResponse.error(405, "POST method required");
         }
 
-        JSONObject body;
-        try {
-            body = new JSONObject(request.body);
-        } catch (JSONException e) {
-            throw new BadRequestException(400, "body must be a JSON object");
-        }
+        JSONObject body = parseJsonBody(request.body);
 
         switch (request.path) {
             case "/api/data":
@@ -188,8 +183,11 @@ public final class HttpAnalyzer {
                 return HttpResponse.ok("beep accepted");
 
             case "/api/vibrate":
+            case "/api/vicrate":
                 long vibrationDuration = optionalPositiveLong(body, "durationMs", 500L);
-                mainHandler.post(() -> myModule.vibrate(context, vibrationDuration));
+                if (!myModule.vibrate(context, vibrationDuration)) {
+                    return HttpResponse.error(409, "vibrator is not available");
+                }
                 return HttpResponse.ok("vibration accepted");
 
             case "/api/notification":
@@ -208,6 +206,18 @@ public final class HttpAnalyzer {
 
             default:
                 return HttpResponse.error(404, "endpoint not found");
+        }
+    }
+
+    private static JSONObject parseJsonBody(String body) throws BadRequestException {
+        if (body == null || body.trim().isEmpty()) {
+            return new JSONObject();
+        }
+
+        try {
+            return new JSONObject(body);
+        } catch (JSONException e) {
+            throw new BadRequestException(400, "body must be a JSON object");
         }
     }
 
@@ -265,7 +275,7 @@ public final class HttpAnalyzer {
 
     private static int parseContentLength(String value) throws BadRequestException {
         if (value == null) {
-            throw new BadRequestException(411, "Content-Length is required");
+            return 0;
         }
 
         try {
@@ -349,6 +359,8 @@ public final class HttpAnalyzer {
                 return "Not Found";
             case 405:
                 return "Method Not Allowed";
+            case 409:
+                return "Conflict";
             case 411:
                 return "Length Required";
             case 413:
