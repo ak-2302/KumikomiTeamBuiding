@@ -200,6 +200,24 @@ public final class HttpAnalyzer {
                 });
                 return HttpResponse.ok("notification accepted");
 
+            case "/api/qr-scanned":
+                String deviceName = optionalString(body, "deviceName", "Raspberry Pi");
+                mainHandler.post(() -> {
+                    boolean displayed = myModule.notification(
+                            context,
+                            context.getString(R.string.qr_scanned_notification_title),
+                            context.getString(R.string.qr_scanned_notification_message, deviceName),
+                            ScanCompleteActivity.class
+                    );
+                    if (!displayed) {
+                        Log.w(TAG, "QR scan notification was not displayed; check notification permission");
+                    }
+                    if (listener != null) {
+                        listener.onQrCodeScanned(deviceName);
+                    }
+                });
+                return HttpResponse.ok("QR scan received");
+
             default:
                 return HttpResponse.error(404, "endpoint not found");
         }
@@ -343,6 +361,19 @@ public final class HttpAnalyzer {
         return ((String) value).trim();
     }
 
+    private static String optionalString(JSONObject body, String key, String defaultValue)
+            throws BadRequestException {
+        if (!body.has(key)) {
+            return defaultValue;
+        }
+
+        Object value = body.opt(key);
+        if (!(value instanceof String) || ((String) value).trim().isEmpty()) {
+            throw new BadRequestException(400, key + " must be a non-empty string");
+        }
+        return ((String) value).trim();
+    }
+
     private static void writeResponse(BufferedOutputStream output, HttpResponse response)
             throws IOException {
         byte[] body = response.body.toString().getBytes(StandardCharsets.UTF_8);
@@ -398,6 +429,9 @@ public final class HttpAnalyzer {
 
     public interface Listener {
         void onDataReceived(Object data);
+
+        default void onQrCodeScanned(String deviceName) {
+        }
 
         default void onServerStarted(int port) {
         }
