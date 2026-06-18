@@ -5,4 +5,9 @@
     <string name="ip_address_format">IPアドレス: %1$s\nポート: %2$d\nhttp://%1$s:%2$d</string>
     <string name="ip_address_unavailable">IPアドレスを取得できません\n同じネットワークに接続してください</string>
     <string name="qr_code_description">Raspberry Pi 接続先のQRコード</string>
+    <string name="qr_scanned_notification_title">QRコード読取完了</string>
+    <string name="qr_scanned_notification_message">%1$s が接続先を読み取りました</string>
+    <string name="scan_complete_title">読み取りました</string>
+    <string name="scan_complete_message">%1$s とスマートフォンを接続しました</string>
+    <string name="back_to_connection">接続先画面に戻る</string>
 </resources>

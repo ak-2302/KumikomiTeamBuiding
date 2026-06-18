@@ -1,6 +1,7 @@
 package com.example.kumikomiteambuiding;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
@@ -67,6 +68,15 @@ public class MainActivity extends AppCompatActivity {
             public void onServerStarted(int port) {
                 Log.i(TAG, "HTTP server started on port " + port);
                 updateIpAddress(port);
+            }
+
+            @Override
+            public void onQrCodeScanned(String deviceName) {
+                Log.i(TAG, "QR code scanned by " + deviceName);
+                Intent intent = new Intent(MainActivity.this, ScanCompleteActivity.class)
+                        .putExtra(ScanCompleteActivity.EXTRA_DEVICE_NAME, deviceName)
+                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                startActivity(intent);
             }
 
             @Override

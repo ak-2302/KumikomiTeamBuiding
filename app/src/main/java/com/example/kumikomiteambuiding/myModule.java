@@ -148,6 +148,15 @@ public final class myModule {
     }
 
     public static boolean notification(Context context, String title, String message) {
+        return notification(context, title, message, MainActivity.class);
+    }
+
+    public static boolean notification(
+            Context context,
+            String title,
+            String message,
+            Class<?> targetActivity
+    ) {
         requireContext(context);
         if (title == null || title.trim().isEmpty()) {
             throw new IllegalArgumentException("title must not be empty");
@@ -169,7 +178,11 @@ public final class myModule {
 
         createNotificationChannel(notificationManager);
 
-        Intent intent = new Intent(context, MainActivity.class)
+        if (targetActivity == null) {
+            throw new IllegalArgumentException("targetActivity must not be null");
+        }
+
+        Intent intent = new Intent(context, targetActivity)
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 context,

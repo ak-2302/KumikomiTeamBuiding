@@ -5,10 +5,13 @@
 
 ## 機能
 - raspberry pi との通信
+- Android 端末の接続先をテキストと QR コードで表示
+- Raspberry Pi による QR コード読取完了の通知と画面遷移
 
 
 ## 構成
 - `MainActivity.java`：メイン処理
+- `ScanCompleteActivity.java`：QR コード読取完了画面
 - `HttpAnalyzer.java`：Raspberry Pi からの HTTP リクエストを受信
 - `myModule.java`：ライブラリ
   - function `beep`：端末から音を鳴らす関数
@@ -90,4 +93,18 @@ curl -X POST http://ANDROID_IP:8080/api/notification \
   -d '{"title":"集中時間","message":"姿勢を確認してください"}'
 ```
 
-`durationMs` は省略可能です。HTTP レスポンスは処理の受付結果を JSON で返します。
+### QR コードの読取完了を通知
+
+Android アプリのメイン画面には、接続先 URL がテキストと QR コードで表示されます。
+Raspberry Pi が QR コードを読み取ると、QR コード内の URL に対して
+`POST /api/qr-scanned` を送信します。
+
+```bash
+curl -X POST http://ANDROID_IP:8080/api/qr-scanned \
+  -H 'Content-Type: application/json' \
+  -d '{"deviceName":"Raspberry Pi"}'
+```
+
+`deviceName` は省略可能で、省略時は `Raspberry Pi` になります。
+リクエストを受信すると、Android 端末へ読取完了通知を表示し、
+アプリを「読み取りました」画面へ遷移させます。通知をタップした場合も同じ画面を開きます。
