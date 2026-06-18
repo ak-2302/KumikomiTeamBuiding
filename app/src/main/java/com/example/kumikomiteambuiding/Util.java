@@ -1,9 +1,15 @@
+package com.example.kumikomiteambuiding;
+
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+
 public class Util {
 
     // Twitterの投稿URLを生成するやつ
     // 例：https://twitter.com/intent/tweet?text=hello%20world
     public static String generateTweet(String text) {
-        String tweet = URLEncoder.encode(text, StandardCharsets.UTF_8);
+        String tweet = Uri.encode(text);
         return "https://twitter.com/intent/tweet?text=" + tweet;
     }
 

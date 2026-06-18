@@ -21,6 +21,8 @@ import android.os.Vibrator;
 import android.os.VibratorManager;
 import android.util.Log;
 
+import androidx.annotation.RequiresApi;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -96,6 +98,7 @@ public final class myModule {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.S)
     private static boolean vibrateWithManager(Context context, long durationMs) {
         VibratorManager vibratorManager =
                 (VibratorManager) context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
@@ -127,6 +130,7 @@ public final class myModule {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private static VibrationEffect createStrongVibration(long durationMs) {
         return VibrationEffect.createOneShot(durationMs, STRONG_VIBRATION_AMPLITUDE);
     }
