@@ -1,6 +1,17 @@
 import requests
 
 
+def notify_qr_scanned(connection_url, device_name="Raspberry Pi"):
+    url = f"{connection_url.rstrip('/')}/api/qr-scanned"
+    response = requests.post(
+        url,
+        json={"deviceName": device_name},
+        timeout=5,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
 def send_request(IP_ADDRESS, type,duration=5000, title="Hello", message="notification sample"):
     url = ""
     data = {}
