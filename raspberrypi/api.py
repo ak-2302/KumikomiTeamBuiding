@@ -1,20 +1,19 @@
 import requests
 
-IP_ADDRESS = "192.168.11.97"
 
-def send_request(type):
+def send_request(IP_ADDRESS, type,duration=5000, title="Hello", message="notification sample"):
     url = ""
     data = {}
     match type:
         case "vibrate":
             url = f"http://{IP_ADDRESS}:8080/api/{type}"
-            data = {"durationMs": 5000}
+            data = {"durationMs": duration}
         case "beep":
             url = f"http://{IP_ADDRESS}:8080/api/{type}"
-            data = {"durationMs": 5000}
+            data = {"durationMs": duration}
         case "notification":
             url = f"http://{IP_ADDRESS}:8080/api/{type}"
-            data = {"title": "Hello", "message": "notification sample"}
+            data = {"title": title, "message": message}
     try:
         response = requests.post(url, json=data)
         response.raise_for_status()
@@ -24,6 +23,7 @@ def send_request(type):
 
 
 if __name__ == "__main__":
-    send_request("vibrate")
-    send_request("beep")
-    send_request("notification")
+    IP_ADDRESS = "192.168.11.97"
+    send_request(IP_ADDRESS, "vibrate")
+    send_request(IP_ADDRESS, "beep")
+    send_request(IP_ADDRESS, "notification")
