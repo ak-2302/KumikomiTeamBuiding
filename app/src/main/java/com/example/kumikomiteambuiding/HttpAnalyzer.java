@@ -180,7 +180,6 @@ public final class HttpAnalyzer {
                 return HttpResponse.ok("beep accepted");
 
             case "/api/vibrate":
-            case "/api/vicrate":
                 long vibrationDuration = optionalPositiveLong(body, "durationMs", 500L);
                 if (!myModule.vibrate(context, vibrationDuration)) {
                     return HttpResponse.error(409, "vibrator is not available");
@@ -248,8 +247,7 @@ public final class HttpAnalyzer {
             }
             headers.put(
                     line.substring(0, separator).trim().toLowerCase(Locale.US),
-                    line.substring(separator + 1).trim()
-            );
+                    line.substring(separator + 1).trim());
         }
 
         int contentLength = parseContentLength(headers.get("content-length"));
@@ -258,8 +256,7 @@ public final class HttpAnalyzer {
         return new HttpRequest(
                 requestParts[0].toUpperCase(Locale.US),
                 path,
-                new String(bodyBytes, StandardCharsets.UTF_8)
-        );
+                new String(bodyBytes, StandardCharsets.UTF_8));
     }
 
     private static String readLine(BufferedInputStream input)
