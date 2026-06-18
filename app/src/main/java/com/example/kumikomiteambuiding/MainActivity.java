@@ -40,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
         ipAddressText = findViewById(R.id.ipAddressText);
         updateIpAddress(HttpAnalyzer.DEFAULT_PORT);
 
-        httpAnalyzer = new HttpAnalyzer(this, new HttpAnalyzer.Listener() {
+        httpAnalyzer = new HttpAnalyzer(getApplicationContext(), new HttpAnalyzer.Listener() {
             @Override
             public void onDataReceived(Object data) {
                 Log.i(TAG, "Received data from Raspberry Pi: " + data);
@@ -66,6 +66,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        if (httpAnalyzer != null && !httpAnalyzer.isRunning()) {
+            httpAnalyzer.start();
+        }
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         int port = httpAnalyzer != null ? httpAnalyzer.getPort() : HttpAnalyzer.DEFAULT_PORT;
@@ -73,11 +81,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onDestroy() {
-        if (httpAnalyzer != null) {
-            httpAnalyzer.stop();
-        }
-        super.onDestroy();
+    protected void onStop() {
+        super.onStop();
+        // Keep the server running while the app is backgrounded.
     }
 
     private void updateIpAddress(int port) {
