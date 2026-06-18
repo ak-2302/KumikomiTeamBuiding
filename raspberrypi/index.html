@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Study Tracker Camera</title>
+    <meta http-equiv="refresh" content="2">
+    <style>
+        body { text-align: center; background-color: #222; color: white; font-family: sans-serif; }
+        img { border: 3px solid #777; border-radius: 8px; margin-top: 20px; max-width: 100%; }
+    </style>
+</head>
+<body>
+    <h2>最新のカメラ映像</h2>
+    <p>C言語のプログラムを実行すると、自動的に画像が切り替わります。</p>
+    <script>
+        document.write('<img src="capture.jpg?time=' + new Date().getTime() + '">');
+    </script>
+</body>
+</html>
