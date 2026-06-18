@@ -103,7 +103,7 @@ int main(void)
         fwrite(buffer.start, 1, buf.bytesused, fp);
         fclose(fp);
 
-        printf("📸 写真を更新しました (%u bytes)\n", buf.bytesused);
+        printf(" 写真を更新しました (%u bytes)\n", buf.bytesused);
 
         // ストリーム停止（次の5秒間、不要なフレームを溜め込まないようにする）
         ioctl(fd, VIDIOC_STREAMOFF, &type);
