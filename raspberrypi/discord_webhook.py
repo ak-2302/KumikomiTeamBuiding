@@ -1,7 +1,7 @@
 import requests
 
-webhook_url = "https://discord.com/api/webhooks/1517079150962409562/VtjPwUyTrI3V2vP0i-j_X-gUiuAxVZ2Nw1J_HcrXUf33FhLJsIfe7hxX5-TMmaa0slKa"
-
+# webhook_url = "https://discord.com/api/webhooks/1517079150962409562/VtjPwUyTrI3V2vP0i-j_X-gUiuAxVZ2Nw1J_HcrXUf33FhLJsIfe7hxX5-TMmaa0slKa"
+webhook_url = "https://discord.com/api/webhooks/1517452986467614814/Xmxj71F-oGmrN7-eVqDXD5C8O4VW2mbNWc7_aMqBk_Ai01D7eo70pbKf-UVoEV3LCuY2"
 def send_message(message="",has_embed=False, embed_title="", embed_description="", embed_color=0x000000):
     data = {
         "content": message
