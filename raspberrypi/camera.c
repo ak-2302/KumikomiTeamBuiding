@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
@@ -21,6 +22,26 @@ int main(void)
     struct v4l2_buffer buf;
     struct buffer buffer;
     enum v4l2_buf_type type;
+    char project_directory[PATH_MAX];
+    char home_directory[PATH_MAX];
+    char capture_path[PATH_MAX];
+    char python_path[PATH_MAX];
+    char analyzer_command[PATH_MAX * 4];
+
+    if (getcwd(project_directory, sizeof(project_directory)) == NULL) {
+        perror("getcwd");
+        return 1;
+    }
+
+    const char *home = getenv("HOME");
+    if (home == NULL || home[0] == '\0') {
+        fprintf(stderr, "HOME environment variable is not set\n");
+        return 1;
+    }
+    snprintf(home_directory, sizeof(home_directory), "%s", home);
+
+    snprintf(capture_path, sizeof(capture_path), "%s/capture.jpg", home_directory);
+    snprintf(python_path, sizeof(python_path), "%s/.venv/bin/python", project_directory);
 
     // 1. カメラのオープンと初期設定
     fd = open("/dev/video0", O_RDWR);
@@ -95,7 +116,7 @@ int main(void)
         }
 
         // 画像ファイルとして保存
-        FILE *fp = fopen("/home/pi/capture.jpg", "wb");
+        FILE *fp = fopen(capture_path, "wb");
         if (!fp) {
             perror("fopen");
             break;
@@ -110,7 +131,19 @@ int main(void)
 
         // 直前の写真を解析する
         printf("--- 顔向きとQRコードを解析中 ---\n");
-        system("python3 face_analyzer.py --once /home/pi/capture.jpg");
+        const char *python_command = access(python_path, X_OK) == 0 ? python_path : "python3";
+        snprintf(
+            analyzer_command,
+            sizeof(analyzer_command),
+            "\"%s\" \"%s/face_analyzer.py\" --once \"%s\"",
+            python_command,
+            project_directory,
+            capture_path
+        );
+        int analyzer_status = system(analyzer_command);
+        if (analyzer_status != 0) {
+            fprintf(stderr, "face_analyzer.py failed with status %d\n", analyzer_status);
+        }
         printf("-------------------------------\n\n");
 
         // 2秒待機（画像更新間隔）

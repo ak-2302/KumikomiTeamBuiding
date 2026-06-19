@@ -1,16 +1,23 @@
-import cv2
 import ipaddress
-import sys
+import json
 import os
+import sys
 import time
+from urllib.parse import urlparse
+
+import cv2
 import requests
+from api import notify_qr_scanned
 from pyzbar.pyzbar import decode as decode_qr
-import re
 
-
-DEFAULT_IMAGE_PATH = "/home/pi/capture.jpg"
+HOME_DIRECTORY = os.path.expanduser("~")
+DEFAULT_IMAGE_PATH = os.path.join(HOME_DIRECTORY, "capture.jpg")
+IP_STORAGE_PATH = os.path.join(HOME_DIRECTORY, "last_ip.txt")
+STATE_STORAGE_PATH = os.path.join(HOME_DIRECTORY, "face_analyzer_state.json")
 ANALYSIS_INTERVAL_SECONDS = 2
-IP_STORAGE_PATH = "/home/pi/last_ip.txt"
+ALERT_COOLDOWN_SECONDS = 60
+QR_NOTIFICATION_COOLDOWN_SECONDS = 30
+ALERT_STATES = {"distracted", "not_detected"}
 
 
 def resolve_cascade_path(filename):
@@ -21,12 +28,14 @@ def resolve_cascade_path(filename):
         candidate_directories.append(cv2_data.haarcascades)
 
     cv2_module_directory = os.path.dirname(cv2.__file__)
-    candidate_directories.extend([
-        os.path.join(cv2_module_directory, "data"),
-        "/usr/share/opencv4/haarcascades",
-        "/usr/share/opencv/haarcascades",
-        "/usr/local/share/opencv4/haarcascades",
-    ])
+    candidate_directories.extend(
+        [
+            os.path.join(cv2_module_directory, "data"),
+            "/usr/share/opencv4/haarcascades",
+            "/usr/share/opencv/haarcascades",
+            "/usr/local/share/opencv4/haarcascades",
+        ]
+    )
 
     for directory in candidate_directories:
         candidate_path = os.path.join(directory, filename)
@@ -40,25 +49,29 @@ FRONTAL_CASCADE_PATH = resolve_cascade_path("haarcascade_frontalface_default.xml
 PROFILE_CASCADE_PATH = resolve_cascade_path("haarcascade_profileface.xml")
 
 
-def send_request(IP_ADDRESS, type, duration=5000, title="Hello", message="notification sample"):
-    url = ""
-    data = {}
-    if type == "vibrate":
-        url = f"http://{IP_ADDRESS}:8080/api/{type}"
+def send_request(
+    connection_url,
+    request_type,
+    duration=5000,
+    title="Hello",
+    message="notification sample",
+):
+    if request_type in {"vibrate", "beep"}:
         data = {"durationMs": duration}
-    elif type == "beep":
-        url = f"http://{IP_ADDRESS}:8080/api/{type}"
-        data = {"durationMs": duration}
-    elif type == "notification":
-        url = f"http://{IP_ADDRESS}:8080/api/{type}"
+    elif request_type == "notification":
         data = {"title": title, "message": message}
+    else:
+        raise ValueError(f"未対応のリクエストです: {request_type}")
+
+    url = f"{connection_url.rstrip('/')}/api/{request_type}"
     try:
-        # ターミナルがフリーズしないようにタイムアウト(3秒)を設定しています
         response = requests.post(url, json=data, timeout=3.0)
         response.raise_for_status()
         print("Request successful:", response.json())
-    except requests.exceptions.RequestException as e:
-        print("Request failed:", e)
+        return True
+    except requests.RequestException as error:
+        print("Request failed:", error)
+        return False
 
 
 def load_face_cascades():
@@ -77,18 +90,19 @@ def analyze_face(image, frontal_cascade, profile_cascade):
         return "error"
 
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    frontal_faces = frontal_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(50, 50))
-
+    frontal_faces = frontal_cascade.detectMultiScale(
+        gray, scaleFactor=1.1, minNeighbors=5, minSize=(50, 50)
+    )
     if len(frontal_faces) > 0:
         print("集中: 前を向いています！")
         return "focused"
 
-    profile_faces = profile_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(50, 50))
-
-    flipped_gray = cv2.flip(gray, 1)
-    profile_faces_flipped = profile_cascade.detectMultiScale(flipped_gray, scaleFactor=1.1, minNeighbors=5, minSize=(50, 50))
-
+    profile_faces = profile_cascade.detectMultiScale(
+        gray, scaleFactor=1.1, minNeighbors=5, minSize=(50, 50)
+    )
+    profile_faces_flipped = profile_cascade.detectMultiScale(
+        cv2.flip(gray, 1), scaleFactor=1.1, minNeighbors=5, minSize=(50, 50)
+    )
     if len(profile_faces) > 0 or len(profile_faces_flipped) > 0:
         print("よそ見: 横を向いています！")
         return "distracted"
@@ -99,118 +113,183 @@ def analyze_face(image, frontal_cascade, profile_cascade):
 
 def read_qr_codes(image):
     qr_codes = []
-
     for obj in decode_qr(image):
         qr_data = obj.data.decode("utf-8", errors="ignore")
         if qr_data:
             qr_codes.append(qr_data)
-
     return qr_codes
 
 
-def save_ip_address(ip):
-    """IPアドレスをファイルに保存する"""
+def parse_connection_url(qr_data):
     try:
-        with open(IP_STORAGE_PATH, "w") as f:
-            f.write(ip)
-        print(f"IPアドレスをファイルに保存しました: {ip}")
-    except Exception as e:
-        print(f"IPアドレスの保存に失敗しました: {e}")
+        parsed = urlparse(qr_data.strip())
+        if parsed.scheme != "http" or not parsed.hostname:
+            return None
+        ipaddress.ip_address(parsed.hostname)
+        port = parsed.port or 8080
+        return f"http://{parsed.hostname}:{port}"
+    except ValueError:
+        return None
+
+
+def save_ip_address(ip_address):
+    try:
+        with open(IP_STORAGE_PATH, "w", encoding="utf-8") as ip_file:
+            ip_file.write(ip_address)
+        print(f"IPアドレスをファイルに保存しました: {ip_address}")
+    except OSError as error:
+        print(f"IPアドレスの保存に失敗しました: {error}")
 
 
 def load_ip_address():
-    """ファイルからIPアドレスを読み込む"""
-    if os.path.exists(IP_STORAGE_PATH):
+    try:
+        with open(IP_STORAGE_PATH, "r", encoding="utf-8") as ip_file:
+            ip_address = ip_file.read().strip()
+        ipaddress.ip_address(ip_address)
+        return ip_address
+    except (OSError, ValueError):
+        return None
+
+
+def load_state():
+    try:
+        with open(STATE_STORAGE_PATH, "r", encoding="utf-8") as state_file:
+            state = json.load(state_file)
+        return state if isinstance(state, dict) else {}
+    except FileNotFoundError:
+        return {}
+    except (OSError, json.JSONDecodeError) as error:
+        print(f"状態ファイルの読み込みに失敗しました: {error}")
+        return {}
+
+
+def save_state(state):
+    temporary_path = f"{STATE_STORAGE_PATH}.tmp"
+    try:
+        with open(temporary_path, "w", encoding="utf-8") as state_file:
+            json.dump(state, state_file, ensure_ascii=False)
+        os.replace(temporary_path, STATE_STORAGE_PATH)
+    except OSError as error:
+        print(f"状態ファイルの保存に失敗しました: {error}")
+
+
+def load_connection_url(state):
+    saved_url = state.get("connection_url")
+    if isinstance(saved_url, str):
+        parsed_url = parse_connection_url(saved_url)
+        if parsed_url:
+            return parsed_url
+
+    legacy_ip = load_ip_address()
+    return f"http://{legacy_ip}:8080" if legacy_ip else None
+
+
+def state_timestamp(state, key):
+    value = state.get(key, 0)
+    return value if isinstance(value, (int, float)) else 0
+
+
+def should_send_alert(face_status, state, now):
+    if face_status not in ALERT_STATES:
+        return False
+    return (
+        state.get("face_status") not in ALERT_STATES
+        or now - state_timestamp(state, "last_alert_at") >= ALERT_COOLDOWN_SECONDS
+    )
+
+
+def process_qr_codes(qr_codes, state, now):
+    connection_url = None
+    for qr_data in qr_codes:
+        print(f"Decoded QR Code: {qr_data}")
+        if connection_url is None:
+            connection_url = parse_connection_url(qr_data)
+
+    if connection_url is None:
+        return None
+
+    hostname = urlparse(connection_url).hostname
+    print(f"取得した接続先: {connection_url}")
+    save_ip_address(hostname)
+    state["connection_url"] = connection_url
+
+    notification_due = (
+        connection_url != state.get("last_qr_url")
+        or now - state_timestamp(state, "last_qr_notified_at")
+        >= QR_NOTIFICATION_COOLDOWN_SECONDS
+    )
+    if notification_due:
+        state["last_qr_url"] = connection_url
+        state["last_qr_notified_at"] = now
         try:
-            with open(IP_STORAGE_PATH, "r") as f:
-                ip = f.read().strip()
-                if ip:
-                    return ip
-        except Exception as e:
-            print(f"IPアドレスの読み込みに失敗しました: {e}")
-    return None
+            result = notify_qr_scanned(connection_url)
+            print("スマートフォンへQR読取完了を通知しました:", result)
+        except requests.RequestException as error:
+            print("スマートフォンへのQR読取通知に失敗しました:", error)
+
+    return connection_url
+
+
+def send_focus_alert(face_status, connection_url):
+    if face_status == "distracted":
+        alert_title = "よそ見注意！"
+        alert_message = "横を向いています。前を向いて集中しましょう。"
+    else:
+        alert_title = "姿勢注意！"
+        alert_message = "顔が見えません。下を向きすぎていませんか？"
+
+    print(f"スマホ {connection_url} に警告（{face_status}）を送信します")
+    send_request(
+        connection_url,
+        "notification",
+        title=alert_title,
+        message=alert_message,
+    )
+    time.sleep(0.5)
+    send_request(connection_url, "vibrate", duration=500)
 
 
 def process_image(image_path, frontal_cascade, profile_cascade):
     image = cv2.imread(image_path)
-
     if image is None:
         print(f"Error: 画像が読み込めません: {image_path}")
         return
 
     face_status = analyze_face(image, frontal_cascade, profile_cascade)
     qr_codes = read_qr_codes(image)
-    ip_address = None
-
-    for qr_data in qr_codes:
-        print(f"Decoded QR Code: {qr_data}")
-        if ip_address is None:
-            # 正規表現で「xxx.xxx.xxx.xxx」のIPアドレス部分だけを抽出
-            match = re.search(r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b', qr_data)
-            if match:
-                extracted_ip = match.group(0) # 抽出した純粋なIPアドレス
-                try:
-                    ipaddress.ip_address(extracted_ip) # 正しいIPかチェック
-                    ip_address = extracted_ip
-                    print(f"取得したIPアドレス: {ip_address}")
-                    # 新しいIPアドレスが見つかったらファイルに保存する
-                    save_ip_address(ip_address)
-                except ValueError:
-                    pass
+    state = load_state()
+    now = time.time()
+    connection_url = process_qr_codes(qr_codes, state, now)
 
     if not qr_codes:
         print("QRコードは検出されませんでした")
-        
-    # 今回QRコードが写っていなかった場合、過去に保存したIPアドレスを読み込む
-    if ip_address is None:
-        ip_address = load_ip_address()
-        if ip_address:
-            print(f"記憶されているIPアドレスを使用します: {ip_address}")
-        else:
-            print("警告: 有効なIPアドレスがありません（QRコードの履歴もありません）")
 
-    # --- 通知とバイブレーションの送信処理 ---
-    # よそ見(distracted) または 顔が見えない(not_detected) の場合に発動
-    if (face_status == "distracted" or face_status == "not_detected") and ip_address:
-        
-        # 状態に合わせてメッセージを変える
-        if face_status == "distracted":
-            alert_title = "よそ見注意！"
-            alert_message = "横を向いています。前を向いて集中しましょう。"
+    if connection_url is None:
+        connection_url = load_connection_url(state)
+        if connection_url:
+            print(f"記憶されている接続先を使用します: {connection_url}")
         else:
-            alert_title = "姿勢注意！"
-            alert_message = "顔が見えません。下を向きすぎていませんか？"
+            print("警告: 有効な接続先がありません（QRコードの履歴もありません）")
 
-        print(f"スマホ {ip_address} に警告（{face_status}）を送信します")
-        
-        # 1. 画面への通知メッセージを送信
-        send_request(
-            ip_address,
-            "notification",
-            title=alert_title,
-            message=alert_message,
-        )
-        
-        # 通信がぶつからないように0.5秒待機
-        time.sleep(0.5) 
-        
-        # 2. バイブレーション（振動）を送信（1000ミリ秒 = 1秒間）
-        send_request(
-            ip_address,
-            "vibrate",
-            duration=500
-        )
+    if connection_url and should_send_alert(face_status, state, now):
+        state["last_alert_at"] = now
+        send_focus_alert(face_status, connection_url)
+
+    state["face_status"] = face_status
+    save_state(state)
 
 
 def watch_image(image_path):
     try:
         frontal_cascade, profile_cascade = load_face_cascades()
-    except FileNotFoundError as e:
-        print(f"Error: {e}")
+    except FileNotFoundError as error:
+        print(f"Error: {error}")
         return
 
-    print(f"{image_path} を{ANALYSIS_INTERVAL_SECONDS}秒おきに解析します。終了するには Ctrl + C を押してください。")
-
+    print(
+        f"{image_path} を{ANALYSIS_INTERVAL_SECONDS}秒おきに解析します。"
+        "終了するには Ctrl + C を押してください。"
+    )
     while True:
         process_image(image_path, frontal_cascade, profile_cascade)
         time.sleep(ANALYSIS_INTERVAL_SECONDS)
@@ -219,10 +298,9 @@ def watch_image(image_path):
 def run_once(image_path):
     try:
         frontal_cascade, profile_cascade = load_face_cascades()
-    except FileNotFoundError as e:
-        print(f"Error: {e}")
+    except FileNotFoundError as error:
+        print(f"Error: {error}")
         return
-
     process_image(image_path, frontal_cascade, profile_cascade)
 
 

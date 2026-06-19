@@ -186,6 +186,24 @@ public final class HttpAnalyzer {
                 }
                 return HttpResponse.ok("vibration accepted");
 
+            case "/api/media/toggle":
+                return mediaResponse(
+                        myModule.toggleMediaPlayback(context),
+                        "playback toggle accepted"
+                );
+
+            case "/api/media/next":
+                return mediaResponse(
+                        myModule.skipToNextMedia(context),
+                        "next track accepted"
+                );
+
+            case "/api/media/previous":
+                return mediaResponse(
+                        myModule.skipToPreviousMedia(context),
+                        "previous track accepted"
+                );
+
             case "/api/notification":
                 String title = body.optString("title", context.getString(R.string.app_name)).trim();
                 String message = requiredString(body, "message");
@@ -234,6 +252,21 @@ public final class HttpAnalyzer {
         data.put("type", type);
         data.put("value", body.get("value"));
         return data;
+    }
+
+    private static HttpResponse mediaResponse(
+            myModule.MediaControlResult result,
+            String successMessage
+    ) {
+        switch (result) {
+            case ACCESS_NOT_GRANTED:
+                return HttpResponse.error(403, "notification access is required");
+            case NO_ACTIVE_SESSION:
+                return HttpResponse.error(409, "no active media session found");
+            case SUCCESS:
+            default:
+                return HttpResponse.ok(successMessage);
+        }
     }
 
     private static JSONObject parseJsonBody(String body) throws BadRequestException {
@@ -393,6 +426,8 @@ public final class HttpAnalyzer {
                 return "OK";
             case 400:
                 return "Bad Request";
+            case 403:
+                return "Forbidden";
             case 404:
                 return "Not Found";
             case 405:

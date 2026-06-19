@@ -10,4 +10,8 @@
     <string name="scan_complete_title">読み取りました</string>
     <string name="scan_complete_message">%1$s とスマートフォンを接続しました</string>
     <string name="back_to_connection">接続先画面に戻る</string>
+    <string name="media_listener_label">音楽操作</string>
+    <string name="media_access_enabled">音楽操作: 有効</string>
+    <string name="media_access_required">音楽操作: 通知へのアクセスが必要です</string>
+    <string name="open_notification_access">通知アクセス設定</string>
 </resources>

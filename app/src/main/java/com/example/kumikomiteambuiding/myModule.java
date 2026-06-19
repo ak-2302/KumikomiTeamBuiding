@@ -6,11 +6,15 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
+import android.media.session.MediaController;
+import android.media.session.MediaSessionManager;
+import android.media.session.PlaybackState;
 import android.os.Build;
 import android.os.CombinedVibration;
 import android.os.Handler;
@@ -22,7 +26,9 @@ import android.os.VibratorManager;
 import android.util.Log;
 
 import androidx.annotation.RequiresApi;
+import androidx.core.app.NotificationManagerCompat;
 
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -140,6 +146,97 @@ public final class myModule {
                 .setUsage(AudioAttributes.USAGE_ALARM)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build();
+    }
+
+    public static MediaControlResult toggleMediaPlayback(Context context) {
+        MediaController controller = getActiveMediaController(context);
+        if (controller == null) {
+            return mediaControllerFailure(context);
+        }
+
+        PlaybackState playbackState = controller.getPlaybackState();
+        int state = playbackState != null
+                ? playbackState.getState()
+                : PlaybackState.STATE_NONE;
+        if (state == PlaybackState.STATE_PLAYING
+                || state == PlaybackState.STATE_BUFFERING
+                || state == PlaybackState.STATE_CONNECTING) {
+            controller.getTransportControls().pause();
+        } else {
+            controller.getTransportControls().play();
+        }
+        return MediaControlResult.SUCCESS;
+    }
+
+    public static MediaControlResult skipToNextMedia(Context context) {
+        MediaController controller = getActiveMediaController(context);
+        if (controller == null) {
+            return mediaControllerFailure(context);
+        }
+        controller.getTransportControls().skipToNext();
+        return MediaControlResult.SUCCESS;
+    }
+
+    public static MediaControlResult skipToPreviousMedia(Context context) {
+        MediaController controller = getActiveMediaController(context);
+        if (controller == null) {
+            return mediaControllerFailure(context);
+        }
+        controller.getTransportControls().skipToPrevious();
+        return MediaControlResult.SUCCESS;
+    }
+
+    public static boolean hasMediaControlAccess(Context context) {
+        requireContext(context);
+        return NotificationManagerCompat.getEnabledListenerPackages(context)
+                .contains(context.getPackageName());
+    }
+
+    private static MediaController getActiveMediaController(Context context) {
+        requireContext(context);
+        if (!hasMediaControlAccess(context)) {
+            return null;
+        }
+
+        MediaSessionManager sessionManager =
+                (MediaSessionManager) context.getSystemService(Context.MEDIA_SESSION_SERVICE);
+        if (sessionManager == null) {
+            return null;
+        }
+
+        try {
+            ComponentName listenerComponent = new ComponentName(
+                    context,
+                    MediaNotificationListenerService.class
+            );
+            List<MediaController> controllers =
+                    sessionManager.getActiveSessions(listenerComponent);
+            if (controllers.isEmpty()) {
+                return null;
+            }
+
+            for (MediaController controller : controllers) {
+                if ("com.spotify.music".equals(controller.getPackageName())) {
+                    return controller;
+                }
+            }
+            return controllers.get(0);
+        } catch (SecurityException e) {
+            Log.w(TAG, "Notification listener access is not available", e);
+            return null;
+        }
+    }
+
+    private static MediaControlResult mediaControllerFailure(Context context) {
+        return hasMediaControlAccess(context)
+                ? MediaControlResult.NO_ACTIVE_SESSION
+                : MediaControlResult.ACCESS_NOT_GRANTED;
+    }
+
+    public enum MediaControlResult {
+        SUCCESS,
+        ACCESS_NOT_GRANTED,
+        NO_ACTIVE_SESSION
     }
 
     public static boolean notification(Context context, String message) {
