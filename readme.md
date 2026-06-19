@@ -52,13 +52,15 @@ sudo apt install -y \
   build-essential \
   libv4l-dev \
   libzbar0 \
+  i2c-tools \
   python3-opencv \
+  python3-smbus \
   python3-venv \
   v4l-utils
 ```
 
 `libv4l-dev` は `camera.c` のビルド、`libzbar0` はQRコード読取、
-`python3-opencv` は画像解析に使用します。
+`python3-opencv` は画像解析、`python3-smbus` はPAJ7620U2とのI2C通信に使用します。
 
 ### Python仮想環境
 
@@ -77,7 +79,7 @@ python3 -m venv --system-site-packages .venv
 依存関係を確認します。
 
 ```bash
-.venv/bin/python -c "import cv2, requests; from pyzbar.pyzbar import decode; print('OK')"
+.venv/bin/python -c "import cv2, requests, smbus; from pyzbar.pyzbar import decode; print('OK')"
 ```
 
 ### カメラプログラムのビルドと実行
@@ -97,6 +99,51 @@ sudo usermod -aG video "$USER"
 
 `camera` は `$HOME` に `capture.jpg`、`last_ip.txt`、
 `face_analyzer_state.json` を作成します。
+
+### ジェスチャーによるメディア操作
+
+PAJ7620U2ジェスチャーセンサーをI2Cへ接続し、`raspi-config` の
+`Interface Options` → `I2C` からI2Cを有効にして再起動します。
+
+```bash
+sudo raspi-config
+sudo reboot
+```
+
+再起動後、センサーのI2Cアドレス `0x73` が表示されることを確認します。
+
+```bash
+i2cdetect -y 1
+```
+
+`camera` を起動すると、ジェスチャーコントローラーも自動的に起動します。
+AndroidアプリのQRコードをカメラへ見せて接続先が保存されると、そのまま
+ジェスチャーでメディアを操作できます。
+
+```bash
+cd KumikomiTeamBuiding/raspberrypi
+./camera
+```
+
+ジェスチャーと操作の対応は次の通りです。
+
+| ジェスチャー | メディア操作 |
+| --- | --- |
+| LEFT | 次の曲 |
+| RIGHT | 前の曲 |
+| FORWARD | 再生・一時停止の切り替え |
+
+QRコードを使わず接続先を指定する場合は、環境変数を使用できます。
+
+```bash
+ANDROID_BASE_URL=http://ANDROID_IP:8080 ./camera
+```
+
+センサー単体の確認では `.venv/bin/python media_gesture.py` を直接実行できます。
+
+PAJ7620U2のPythonドライバはDFRobotのMITライセンス版を
+`raspberrypi/vendor` に同梱しています。取得元と固定したリビジョンは
+`raspberrypi/vendor/README.md` を参照してください。
 
 ## Raspberry Pi からの HTTP アクセス
 

@@ -69,7 +69,7 @@ def send_request(
         response.raise_for_status()
         print("Request successful:", response.json())
         return True
-    except requests.RequestException as error:
+    except requests.exceptions.RequestException as error:
         print("Request failed:", error)
         return False
 
@@ -224,7 +224,7 @@ def process_qr_codes(qr_codes, state, now):
         try:
             result = notify_qr_scanned(connection_url)
             print("スマートフォンへQR読取完了を通知しました:", result)
-        except requests.RequestException as error:
+        except requests.exceptions.RequestException as error:
             print("スマートフォンへのQR読取通知に失敗しました:", error)
 
     return connection_url
