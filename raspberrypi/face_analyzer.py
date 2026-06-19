@@ -5,10 +5,12 @@ import os
 import time
 import requests
 from pyzbar.pyzbar import decode as decode_qr
+import re
 
 
 DEFAULT_IMAGE_PATH = "/home/pi/capture.jpg"
 ANALYSIS_INTERVAL_SECONDS = 2
+IP_STORAGE_PATH = "/home/pi/last_ip.txt"
 
 
 def resolve_cascade_path(filename):
@@ -37,6 +39,7 @@ def resolve_cascade_path(filename):
 FRONTAL_CASCADE_PATH = resolve_cascade_path("haarcascade_frontalface_default.xml")
 PROFILE_CASCADE_PATH = resolve_cascade_path("haarcascade_profileface.xml")
 
+
 def send_request(IP_ADDRESS, type, duration=5000, title="Hello", message="notification sample"):
     url = ""
     data = {}
@@ -50,11 +53,13 @@ def send_request(IP_ADDRESS, type, duration=5000, title="Hello", message="notifi
         url = f"http://{IP_ADDRESS}:8080/api/{type}"
         data = {"title": title, "message": message}
     try:
-        response = requests.post(url, json=data)
+        # ターミナルがフリーズしないようにタイムアウト(3秒)を設定しています
+        response = requests.post(url, json=data, timeout=3.0)
         response.raise_for_status()
         print("Request successful:", response.json())
     except requests.exceptions.RequestException as e:
         print("Request failed:", e)
+
 
 def load_face_cascades():
     frontal_cascade = cv2.CascadeClassifier(FRONTAL_CASCADE_PATH)
@@ -103,6 +108,29 @@ def read_qr_codes(image):
     return qr_codes
 
 
+def save_ip_address(ip):
+    """IPアドレスをファイルに保存する"""
+    try:
+        with open(IP_STORAGE_PATH, "w") as f:
+            f.write(ip)
+        print(f"IPアドレスをファイルに保存しました: {ip}")
+    except Exception as e:
+        print(f"IPアドレスの保存に失敗しました: {e}")
+
+
+def load_ip_address():
+    """ファイルからIPアドレスを読み込む"""
+    if os.path.exists(IP_STORAGE_PATH):
+        try:
+            with open(IP_STORAGE_PATH, "r") as f:
+                ip = f.read().strip()
+                if ip:
+                    return ip
+        except Exception as e:
+            print(f"IPアドレスの読み込みに失敗しました: {e}")
+    return None
+
+
 def process_image(image_path, frontal_cascade, profile_cascade):
     image = cv2.imread(image_path)
 
@@ -117,23 +145,60 @@ def process_image(image_path, frontal_cascade, profile_cascade):
     for qr_data in qr_codes:
         print(f"Decoded QR Code: {qr_data}")
         if ip_address is None:
-            try:
-                ipaddress.ip_address(qr_data)
-                ip_address = qr_data
-                print(f"取得したIPアドレス: {ip_address}")
-            except ValueError:
-                pass
+            # 正規表現で「xxx.xxx.xxx.xxx」のIPアドレス部分だけを抽出
+            match = re.search(r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b', qr_data)
+            if match:
+                extracted_ip = match.group(0) # 抽出した純粋なIPアドレス
+                try:
+                    ipaddress.ip_address(extracted_ip) # 正しいIPかチェック
+                    ip_address = extracted_ip
+                    print(f"取得したIPアドレス: {ip_address}")
+                    # 新しいIPアドレスが見つかったらファイルに保存する
+                    save_ip_address(ip_address)
+                except ValueError:
+                    pass
 
     if not qr_codes:
         print("QRコードは検出されませんでした")
+        
+    # 今回QRコードが写っていなかった場合、過去に保存したIPアドレスを読み込む
+    if ip_address is None:
+        ip_address = load_ip_address()
+        if ip_address:
+            print(f"記憶されているIPアドレスを使用します: {ip_address}")
+        else:
+            print("警告: 有効なIPアドレスがありません（QRコードの履歴もありません）")
 
-    if face_status == "distracted" and ip_address:
-        print(f"スマホ {ip_address} に通知を送信します")
+    # --- 通知とバイブレーションの送信処理 ---
+    # よそ見(distracted) または 顔が見えない(not_detected) の場合に発動
+    if (face_status == "distracted" or face_status == "not_detected") and ip_address:
+        
+        # 状態に合わせてメッセージを変える
+        if face_status == "distracted":
+            alert_title = "よそ見注意！"
+            alert_message = "横を向いています。前を向いて集中しましょう。"
+        else:
+            alert_title = "姿勢注意！"
+            alert_message = "顔が見えません。下を向きすぎていませんか？"
+
+        print(f"スマホ {ip_address} に警告（{face_status}）を送信します")
+        
+        # 1. 画面への通知メッセージを送信
         send_request(
             ip_address,
             "notification",
-            title="集中できていません",
-            message="横を向いています。前を向いてください。",
+            title=alert_title,
+            message=alert_message,
+        )
+        
+        # 通信がぶつからないように0.5秒待機
+        time.sleep(0.5) 
+        
+        # 2. バイブレーション（振動）を送信（1000ミリ秒 = 1秒間）
+        send_request(
+            ip_address,
+            "vibrate",
+            duration=500
         )
 
 
@@ -150,6 +215,7 @@ def watch_image(image_path):
         process_image(image_path, frontal_cascade, profile_cascade)
         time.sleep(ANALYSIS_INTERVAL_SECONDS)
 
+
 def run_once(image_path):
     try:
         frontal_cascade, profile_cascade = load_face_cascades()
@@ -158,6 +224,7 @@ def run_once(image_path):
         return
 
     process_image(image_path, frontal_cascade, profile_cascade)
+
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--once":
