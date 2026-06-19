@@ -251,10 +251,10 @@ def send_focus_alert(face_status, connection_url):
     send_request(connection_url, "vibrate", duration=500)
 
     send_message(
-       message="hello from Raspberry Pi!",
-       has_embed=False, 
-       embed_title="", 
-       embed_description="", 
+       message="",
+       has_embed=True, 
+       embed_title=alert_title, 
+       embed_description=alert_message, 
        embed_color=0x123456
        ) 
 
