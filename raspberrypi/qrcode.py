@@ -20,5 +20,5 @@ if __name__ == "__main__":
         try:
             result = notify_qr_scanned(connection_url)
             print("スマートフォンへ読取完了を通知しました:", result)
-        except requests.RequestException as error:
+        except requests.exceptions.RequestException as error:
             print("スマートフォンへの通知に失敗しました:", error)

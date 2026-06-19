@@ -6,6 +6,9 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <signal.h>
 #include <linux/videodev2.h>
 
 struct buffer
@@ -13,6 +16,21 @@ struct buffer
     void *start;
     size_t length;
 };
+
+static pid_t start_gesture_controller(const char *python_command, const char *script_path)
+{
+    pid_t pid = fork();
+    if (pid < 0) {
+        perror("fork media_gesture.py");
+        return -1;
+    }
+    if (pid == 0) {
+        execlp(python_command, python_command, script_path, (char *)NULL);
+        perror("exec media_gesture.py");
+        _exit(127);
+    }
+    return pid;
+}
 
 int main(void)
 {
@@ -26,6 +44,7 @@ int main(void)
     char home_directory[PATH_MAX];
     char capture_path[PATH_MAX];
     char python_path[PATH_MAX];
+    char gesture_script_path[PATH_MAX];
     char analyzer_command[PATH_MAX * 4];
 
     if (getcwd(project_directory, sizeof(project_directory)) == NULL) {
@@ -42,6 +61,13 @@ int main(void)
 
     snprintf(capture_path, sizeof(capture_path), "%s/capture.jpg", home_directory);
     snprintf(python_path, sizeof(python_path), "%s/.venv/bin/python", project_directory);
+    snprintf(
+        gesture_script_path,
+        sizeof(gesture_script_path),
+        "%s/media_gesture.py",
+        project_directory
+    );
+    const char *python_command = access(python_path, X_OK) == 0 ? python_path : "python3";
 
     // 1. カメラのオープンと初期設定
     fd = open("/dev/video0", O_RDWR);
@@ -92,6 +118,7 @@ int main(void)
 
     type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     printf("自動監視システムを起動します（終了するには Ctrl + C を押してください）\n\n");
+    pid_t gesture_pid = start_gesture_controller(python_command, gesture_script_path);
 
     // ==========================================
     // 🌟 ここから無限ループ（5秒ごとの自動実行）
@@ -131,7 +158,6 @@ int main(void)
 
         // 直前の写真を解析する
         printf("--- 顔向きとQRコードを解析中 ---\n");
-        const char *python_command = access(python_path, X_OK) == 0 ? python_path : "python3";
         snprintf(
             analyzer_command,
             sizeof(analyzer_command),
@@ -155,6 +181,11 @@ int main(void)
 
     munmap(buffer.start, buffer.length);
     close(fd);
+
+    if (gesture_pid > 0) {
+        kill(gesture_pid, SIGTERM);
+        waitpid(gesture_pid, NULL, 0);
+    }
 
     return 0;
 }
