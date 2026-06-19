@@ -21,6 +21,8 @@ import android.os.Vibrator;
 import android.os.VibratorManager;
 import android.util.Log;
 
+import androidx.annotation.RequiresApi;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -96,6 +98,7 @@ public final class myModule {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.S)
     private static boolean vibrateWithManager(Context context, long durationMs) {
         VibratorManager vibratorManager =
                 (VibratorManager) context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
@@ -127,6 +130,7 @@ public final class myModule {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private static VibrationEffect createStrongVibration(long durationMs) {
         return VibrationEffect.createOneShot(durationMs, STRONG_VIBRATION_AMPLITUDE);
     }
@@ -144,6 +148,15 @@ public final class myModule {
     }
 
     public static boolean notification(Context context, String title, String message) {
+        return notification(context, title, message, MainActivity.class);
+    }
+
+    public static boolean notification(
+            Context context,
+            String title,
+            String message,
+            Class<?> targetActivity
+    ) {
         requireContext(context);
         if (title == null || title.trim().isEmpty()) {
             throw new IllegalArgumentException("title must not be empty");
@@ -165,7 +178,11 @@ public final class myModule {
 
         createNotificationChannel(notificationManager);
 
-        Intent intent = new Intent(context, MainActivity.class)
+        if (targetActivity == null) {
+            throw new IllegalArgumentException("targetActivity must not be null");
+        }
+
+        Intent intent = new Intent(context, targetActivity)
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 context,
