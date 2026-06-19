@@ -10,6 +10,8 @@ import requests
 from api import notify_qr_scanned
 from pyzbar.pyzbar import decode as decode_qr
 
+from discord_webhook import send_message
+
 HOME_DIRECTORY = os.path.expanduser("~")
 DEFAULT_IMAGE_PATH = os.path.join(HOME_DIRECTORY, "capture.jpg")
 IP_STORAGE_PATH = os.path.join(HOME_DIRECTORY, "last_ip.txt")
@@ -247,6 +249,14 @@ def send_focus_alert(face_status, connection_url):
     )
     time.sleep(0.5)
     send_request(connection_url, "vibrate", duration=500)
+
+    send_message(
+       message="hello from Raspberry Pi!",
+       has_embed=False, 
+       embed_title="", 
+       embed_description="", 
+       embed_color=0x123456
+       ) 
 
 
 def process_image(image_path, frontal_cascade, profile_cascade):
