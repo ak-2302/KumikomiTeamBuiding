@@ -13,3 +13,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+/raspberrypi/.venv/
+/raspberrypi/camera
+/raspberrypi/capture.jpg
+/raspberrypi/face_analyzer_state.json
+/raspberrypi/last_ip.txt

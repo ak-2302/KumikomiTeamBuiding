@@ -12,7 +12,19 @@ def notify_qr_scanned(connection_url, device_name="Raspberry Pi"):
     return response.json()
 
 
-def send_request(IP_ADDRESS, type,duration=5000, title="Hello", message="notification sample"):
+def send_media_command(connection_url, action):
+    if action not in {"toggle", "next", "previous"}:
+        raise ValueError("action must be toggle, next, or previous")
+
+    url = f"{connection_url.rstrip('/')}/api/media/{action}"
+    response = requests.post(url, timeout=5)
+    response.raise_for_status()
+    return response.json()
+
+
+def send_request(
+    IP_ADDRESS, type, duration=5000, title="Hello", message="notification sample"
+):
     url = ""
     data = {}
     match type:
