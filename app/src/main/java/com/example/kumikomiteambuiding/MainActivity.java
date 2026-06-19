@@ -7,6 +7,7 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
@@ -40,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
 
     private HttpAnalyzer httpAnalyzer;
     private TextView ipAddressText;
+    private TextView mediaAccessStatus;
     private ImageView connectionQrCode;
     private String displayedConnectionUrl;
 
@@ -55,7 +57,14 @@ public class MainActivity extends AppCompatActivity {
         });
 
         ipAddressText = findViewById(R.id.ipAddressText);
+        mediaAccessStatus = findViewById(R.id.mediaAccessStatus);
         connectionQrCode = findViewById(R.id.connectionQrCode);
+        findViewById(R.id.mediaAccessButton).setOnClickListener(view -> {
+            Intent intent = new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
+            if (intent.resolveActivity(getPackageManager()) != null) {
+                startActivity(intent);
+            }
+        });
         updateIpAddress(HttpAnalyzer.DEFAULT_PORT);
 
         httpAnalyzer = new HttpAnalyzer(getApplicationContext(), new HttpAnalyzer.Listener() {
@@ -105,6 +114,7 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         int port = httpAnalyzer != null ? httpAnalyzer.getPort() : HttpAnalyzer.DEFAULT_PORT;
         updateIpAddress(port);
+        updateMediaAccessStatus();
     }
 
     @Override
@@ -126,6 +136,12 @@ public class MainActivity extends AppCompatActivity {
         String connectionUrl = "http://" + ipAddress + ":" + port;
         ipAddressText.setText(getString(R.string.ip_address_format, ipAddress, port));
         showConnectionQrCode(connectionUrl);
+    }
+
+    private void updateMediaAccessStatus() {
+        mediaAccessStatus.setText(myModule.hasMediaControlAccess(this)
+                ? R.string.media_access_enabled
+                : R.string.media_access_required);
     }
 
     private void showConnectionQrCode(String connectionUrl) {
