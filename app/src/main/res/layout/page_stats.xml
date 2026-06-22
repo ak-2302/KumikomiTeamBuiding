@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/surface"
+    android:paddingStart="24dp"
+    android:paddingEnd="24dp">
+
+    <TextView
+        android:id="@+id/statsTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:letterSpacing="0"
+        android:text="@string/statistics"
+        android:textColor="@color/ink"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/focusRateText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="26dp"
+        android:fontFamily="sans-serif-light"
+        android:letterSpacing="0"
+        android:textColor="@color/ink"
+        android:textSize="54sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/statsTitle"
+        tools:text="82%" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginBottom="10dp"
+        android:letterSpacing="0"
+        android:text="@string/focus_rate"
+        android:textColor="@color/ink_muted"
+        android:textSize="14sp"
+        app:layout_constraintBottom_toBottomOf="@id/focusRateText"
+        app:layout_constraintStart_toEndOf="@id/focusRateText" />
+
+    <LinearLayout
+        android:id="@+id/summaryRow"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/focusRateText">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/focused_time" android:textColor="@color/ink_muted" android:textSize="13sp" android:letterSpacing="0" />
+            <TextView android:id="@+id/focusedTimeText" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/focus" android:textSize="22sp" android:textStyle="bold" android:letterSpacing="0" tools:text="20:30" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/distracted_time" android:textColor="@color/ink_muted" android:textSize="13sp" android:letterSpacing="0" />
+            <TextView android:id="@+id/distractedTimeText" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/distracted" android:textSize="22sp" android:textStyle="bold" android:letterSpacing="0" tools:text="04:30" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/timelineTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="36dp"
+        android:letterSpacing="0"
+        android:text="@string/timeline"
+        android:textColor="@color/ink"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/summaryRow" />
+
+    <com.example.kumikomiteambuiding.SessionChartView
+        android:id="@+id/sessionChart"
+        android:layout_width="0dp"
+        android:layout_height="230dp"
+        android:layout_marginTop="12dp"
+        android:contentDescription="@string/stats_page_description"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/timelineTitle" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp"
+        android:letterSpacing="0"
+        android:text="@string/timer_page_description"
+        android:textColor="@color/ink_muted"
+        android:textSize="13sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

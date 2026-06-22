@@ -57,11 +57,15 @@ def send_request(
     duration=5000,
     title="Hello",
     message="notification sample",
+    value=None,
+    quiet=False,
 ):
     if request_type in {"vibrate", "beep"}:
         data = {"durationMs": duration}
     elif request_type == "notification":
         data = {"title": title, "message": message}
+    elif request_type == "data":
+        data = {"type": "focus", "value": value}
     else:
         raise ValueError(f"未対応のリクエストです: {request_type}")
 
@@ -69,10 +73,12 @@ def send_request(
     try:
         response = requests.post(url, json=data, timeout=3.0)
         response.raise_for_status()
-        print("Request successful:", response.json())
+        if not quiet:
+            print("Request successful:", response.json())
         return True
     except requests.exceptions.RequestException as error:
-        print("Request failed:", error)
+        if not quiet:
+            print("Request failed:", error)
         return False
 
 
@@ -280,6 +286,14 @@ def process_image(image_path, frontal_cascade, profile_cascade):
             print(f"記憶されている接続先を使用します: {connection_url}")
         else:
             print("警告: 有効な接続先がありません（QRコードの履歴もありません）")
+
+    if connection_url and face_status != "error":
+        send_request(
+            connection_url,
+            "data",
+            value=face_status,
+            quiet=True,
+        )
 
     if connection_url and should_send_alert(face_status, state, now):
         state["last_alert_at"] = now

@@ -14,4 +14,24 @@
     <string name="media_access_enabled">音楽操作: 有効</string>
     <string name="media_access_required">音楽操作: 通知へのアクセスが必要です</string>
     <string name="open_notification_access">通知アクセス設定</string>
+    <string name="focus_title">FOCUS</string>
+    <string name="focus_phase">集中</string>
+    <string name="break_phase">休憩</string>
+    <string name="timer_ready">準備できています</string>
+    <string name="timer_running">計測中</string>
+    <string name="timer_paused">一時停止</string>
+    <string name="timer_start">開始</string>
+    <string name="timer_pause">一時停止</string>
+    <string name="timer_reset">タイマーをリセット</string>
+    <string name="connection">接続</string>
+    <string name="statistics">今回の集中</string>
+    <string name="focus_rate">集中率</string>
+    <string name="focused_time">集中できた時間</string>
+    <string name="distracted_time">外れていた時間</string>
+    <string name="timeline">時間ごとの集中</string>
+    <string name="timer_page_description">タイマー</string>
+    <string name="stats_page_description">統計</string>
+    <string name="connection_title">Raspberry Pi 接続</string>
+    <string name="connection_waiting">接続先を確認しています</string>
+    <string name="timer_inactive_api">集中タイマーが稼働していません</string>
 </resources>

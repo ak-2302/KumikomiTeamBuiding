@@ -37,6 +37,7 @@ public final class HttpAnalyzer {
     private final Context context;
     private final int port;
     private final Listener listener;
+    private final FocusSessionManager sessionManager;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final AtomicBoolean running = new AtomicBoolean(false);
 
@@ -58,6 +59,7 @@ public final class HttpAnalyzer {
         this.context = context.getApplicationContext();
         this.port = port;
         this.listener = listener;
+        this.sessionManager = FocusSessionManager.get(context);
     }
 
     public synchronized void start() {
@@ -163,10 +165,16 @@ public final class HttpAnalyzer {
         }
 
         JSONObject body = parseJsonBody(request.body);
+        if (requiresRunningFocusTimer(request.path) && !sessionManager.isFocusRunning()) {
+            return HttpResponse.error(409, "focus timer is not running");
+        }
 
         switch (request.path) {
             case "/api/data":
                 JSONObject data = parseDataPayload(body);
+                if ("focus".equals(data.optString("type"))) {
+                    sessionManager.recordFocusStatus(data.optString("value"));
+                }
                 mainHandler.post(() -> {
                     if (listener != null) {
                         listener.onDataReceived(data);
@@ -239,6 +247,14 @@ public final class HttpAnalyzer {
             default:
                 return HttpResponse.error(404, "endpoint not found");
         }
+    }
+
+    private static boolean requiresRunningFocusTimer(String path) {
+        return "/api/data".equals(path)
+                || "/api/beep".equals(path)
+                || "/api/vibrate".equals(path)
+                || "/api/notification".equals(path)
+                || path.startsWith("/api/media/");
     }
 
     private static JSONObject parseDataPayload(JSONObject body)
