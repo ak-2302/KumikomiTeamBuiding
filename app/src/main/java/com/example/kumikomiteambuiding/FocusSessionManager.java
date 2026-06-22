@@ -124,6 +124,21 @@ public final class FocusSessionManager {
         persist();
     }
 
+    public synchronized void finishBreak() {
+        if (phase != Phase.BREAK) {
+            return;
+        }
+        running = false;
+        phase = Phase.FOCUS;
+        totalDurationMs = FOCUS_DURATION_MS;
+        remainingMs = FOCUS_DURATION_MS;
+        endTimeMs = 0L;
+        activeDistractedStartMs = -1L;
+        lastFocusStatus = null;
+        currentSegments.clear();
+        persist();
+    }
+
     public synchronized boolean isFocusRunning() {
         advanceCompletedPhase();
         return running && phase == Phase.FOCUS;

@@ -9,7 +9,7 @@
     <string name="qr_scanned_notification_message">%1$s が接続先を読み取りました</string>
     <string name="scan_complete_title">読み取りました</string>
     <string name="scan_complete_message">%1$s とスマートフォンを接続しました</string>
-    <string name="back_to_connection">接続先画面に戻る</string>
+    <string name="back_to_timer">タイマーに戻る</string>
     <string name="media_listener_label">音楽操作</string>
     <string name="media_access_enabled">音楽操作: 有効</string>
     <string name="media_access_required">音楽操作: 通知へのアクセスが必要です</string>
@@ -23,6 +23,7 @@
     <string name="timer_start">開始</string>
     <string name="timer_pause">一時停止</string>
     <string name="timer_reset">タイマーをリセット</string>
+    <string name="finish_break">休憩を終了</string>
     <string name="connection">接続</string>
     <string name="statistics">今回の集中</string>
     <string name="focus_rate">集中率</string>

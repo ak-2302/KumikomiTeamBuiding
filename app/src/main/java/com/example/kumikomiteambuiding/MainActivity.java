@@ -335,6 +335,7 @@ public class MainActivity extends AppCompatActivity {
         private final TextView timeText;
         private final TextView statusText;
         private final MaterialButton toggleButton;
+        private final MaterialButton finishBreakButton;
 
         private TimerPageHolder(@NonNull View itemView) {
             super(itemView);
@@ -343,12 +344,17 @@ public class MainActivity extends AppCompatActivity {
             timeText = itemView.findViewById(R.id.timeText);
             statusText = itemView.findViewById(R.id.timerStatusText);
             toggleButton = itemView.findViewById(R.id.toggleTimerButton);
+            finishBreakButton = itemView.findViewById(R.id.finishBreakButton);
             toggleButton.setOnClickListener(view -> {
                 sessionManager.toggleTimer();
                 updateDashboard();
             });
             itemView.findViewById(R.id.resetButton).setOnClickListener(view -> {
                 sessionManager.resetTimer();
+                updateDashboard();
+            });
+            finishBreakButton.setOnClickListener(view -> {
+                sessionManager.finishBreak();
                 updateDashboard();
             });
             itemView.findViewById(R.id.connectionButton)
@@ -361,6 +367,9 @@ public class MainActivity extends AppCompatActivity {
                     ? R.string.focus_phase
                     : R.string.break_phase);
             timeText.setText(formatDuration(snapshot.remainingMs, true));
+            finishBreakButton.setVisibility(snapshot.phase == FocusSessionManager.Phase.BREAK
+                    ? View.VISIBLE
+                    : View.GONE);
             if (snapshot.running) {
                 statusText.setText(R.string.timer_running);
                 toggleButton.setText(R.string.timer_pause);

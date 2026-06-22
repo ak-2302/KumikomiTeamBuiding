@@ -124,6 +124,21 @@
             app:iconTint="@color/white" />
     </LinearLayout>
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/finishBreakButton"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:layout_marginTop="4dp"
+        android:letterSpacing="0"
+        android:text="@string/finish_break"
+        android:textColor="@color/ink_muted"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/timerControls"
+        tools:visibility="visible" />
+
     <TextView
         android:id="@+id/statsHint"
         android:layout_width="wrap_content"
