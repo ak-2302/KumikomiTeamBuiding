@@ -2,4 +2,13 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="surface">#FFF8FA</color>
+    <color name="surface_strong">#FFFFFF</color>
+    <color name="ink">#202124</color>
+    <color name="ink_muted">#747980</color>
+    <color name="track">#E1E5EA</color>
+    <color name="focus">#2F9C95</color>
+    <color name="focus_soft">#B9DEDA</color>
+    <color name="distracted">#FF5C62</color>
+    <color name="break_color">#E5A53B</color>
 </resources>

@@ -150,6 +150,8 @@ PAJ7620U2のPythonドライバはDFRobotのMITライセンス版を
 アプリの起動中、Android 端末は TCP ポート `8080` で HTTP リクエストを待ち受けます。
 Raspberry Pi と Android 端末を同じネットワークに接続し、Android 端末の IP アドレスへ
 JSON 形式の POST リクエストを送信してください。
+QR読取完了を除くAPIは、Android側の集中タイマーが稼働中の場合だけ処理されます。
+停止中・休憩中は `409 focus timer is not running` を返します。
 
 ### データを送信
 
@@ -161,6 +163,9 @@ curl -X POST http://ANDROID_IP:8080/api/data \
   -H 'Content-Type: application/json' \
   -d '{"type":"time","value":10}'
 ```
+
+顔解析では `type` を `focus`、`value` を `focused`、`distracted`、
+`not_detected` のいずれかにして送信します。この履歴がタイマー円周と統計へ反映されます。
 
 ```bash
 curl -X POST http://ANDROID_IP:8080/api/data \
